@@ -1,22 +1,5 @@
-/**
- * @format
- */
-
-import 'react-native';
-import React, {act} from 'react';
-
-// Note: import explicitly to use the types shipped with jest.
-import {it} from '@jest/globals';
-
-// Note: test renderer must be required after react-native.
-import renderer from 'react-test-renderer';
-
 import {fireEvent, render, waitFor} from '@testing-library/react-native';
 import CitySelectorScreen from '../src/Screens/CitySelectorScreen';
-
-import axios from 'axios';
-
-jest.mock('axios');
 
 jest.useFakeTimers();
 jest.mock('react-native-device-info', () => {
@@ -36,9 +19,21 @@ jest.mock('@react-navigation/native', () => ({
   useNavigation: () => ({navigate: mockedNavigate}),
 }));
 
-it('should display input field after clicking city button', async () => {
+jest.mock('../src/network/API-Functions', () => ({
+  getWeatherForCountry: jest.fn().mockImplementation(() =>
+    Promise.resolve({
+      name: 'London',
+      id: 111111,
+      sys: {
+        country: 'UK',
+      },
+    }),
+  ),
+}));
+
+it('should display card if valid city is added ', async () => {
   // @ts-expect-error
-  const {getByText, getByTestId} = render(<CitySelectorScreen />);
+  const {getByTestId} = render(<CitySelectorScreen />);
 
   const addCityButton = getByTestId('Add_City_Button');
 
@@ -46,5 +41,15 @@ it('should display input field after clicking city button', async () => {
 
   const baseModal = getByTestId('base_modal_add_city');
 
-  expect(baseModal).toBeTruthy();
+  const textInput = getByTestId('search_input');
+
+  expect(textInput).toBeTruthy();
+
+  fireEvent.changeText(textInput, 'London');
+  fireEvent(textInput, 'onSubmitEditing');
+
+  await waitFor(() => {
+    //   expect(getByTestId('testID_error_message')).toBeTruthy();
+    expect(getByTestId(`testID_London`)).toBeTruthy();
+  });
 });
